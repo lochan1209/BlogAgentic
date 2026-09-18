@@ -1,5 +1,5 @@
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Body
 from src.graphs.graph_builder import GraphBuilder
 from src.llms.groqllm import GroqLLM
 
@@ -14,9 +14,13 @@ os.environ["LANGSMITH_API_KEY"] = os.getenv("LANGCHAIN_API_KEY")
 ## API's
 
 @app.post("/blogs")
-async def create_blogs(request:Request):
-    data = await request.json()
-    topic = data.get("topic", "")
+async def create_blogs(
+    topic: str = Body(..., embed=True, example="Agentic AI"),
+    language: str = Body(default="", embed=True, example="french")):
+    #request:Request
+    # data = await request.json()
+    # topic = data.get("topic", "")
+    # language = data.get("language", "")
 
     ## get the llm object
     groqllm = GroqLLM()
@@ -24,10 +28,12 @@ async def create_blogs(request:Request):
 
     ## get the graph
     graph_builder = GraphBuilder(llm=llm)
-    if topic:
+    if language and topic:
+        graph = graph_builder.setup_graph(usecase="language")
+        state = graph.invoke({"topic":topic, "current_language": language.lower()})
+    elif topic:
         graph = graph_builder.setup_graph(usecase="topic")
         state = graph.invoke({"topic":topic})
-
     return {"data":state}
 
 
